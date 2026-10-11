@@ -89,14 +89,14 @@ final class QuotaModel: ObservableObject {
         guard !isRefreshing else { return }
         isRefreshing = true
         lastAttempt = Date()
-        refreshStage = "正在启动 Codex…"
+        refreshStage = L10n.text("正在启动 Codex…", "Starting Codex…")
         let requestID = UUID()
         refreshID = requestID
         DispatchQueue.main.asyncAfter(deadline: .now() + 32) { [weak self] in
             guard let self, self.refreshID == requestID, self.isRefreshing else { return }
             self.refreshID = UUID()
             self.isRefreshing = false
-            self.error = "读取超过 32 秒，已停止等待。请点击刷新重试。"
+            self.error = L10n.text("读取超过 32 秒，已停止等待。请点击刷新重试。", "The request exceeded 32 seconds and was stopped. Click Refresh to try again.")
             self.refreshStage = ""
         }
         let path = customPath.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -128,7 +128,7 @@ final class QuotaModel: ObservableObject {
 
     func chooseExecutable() {
         let panel = NSOpenPanel()
-        panel.title = "选择 codex 可执行文件"
+        panel.title = L10n.text("选择 codex 可执行文件", "Choose the codex executable")
         panel.canChooseDirectories = false
         panel.showsHiddenFiles = true
         panel.allowsMultipleSelection = false

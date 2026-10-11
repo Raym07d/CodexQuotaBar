@@ -6,10 +6,10 @@ struct QuotaWindow: Decodable {
     let resetsAt: Double?
     var remaining: Double? { usedPercent.map { max(0, min(100, 100 - $0)) } }
     var duration: String {
-        guard let minutes = windowDurationMins, minutes > 0 else { return "未知周期" }
-        if minutes % 1440 == 0 { return "\(minutes / 1440) 天" }
-        if minutes % 60 == 0 { return "\(minutes / 60) 小时" }
-        return "\(minutes) 分钟"
+        guard let minutes = windowDurationMins, minutes > 0 else { return L10n.text("未知周期", "Unknown window") }
+        if minutes % 1440 == 0 { return L10n.text("\(minutes / 1440) 天", "\(minutes / 1440) days") }
+        if minutes % 60 == 0 { return L10n.text("\(minutes / 60) 小时", "\(minutes / 60) hours") }
+        return L10n.text("\(minutes) 分钟", "\(minutes) minutes")
     }
     var resetDate: Date? { resetsAt.map(Date.init(timeIntervalSince1970:)) }
 }
@@ -75,16 +75,16 @@ enum MenuStyle: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .standard: return "标准 · 5h 80% | week 60%"
-        case .compact: return "紧凑 · 5h:80% w:60%"
-        case .chinese: return "中文 · 5小时 80% · 本周 60%"
-        case .stacked: return "双排 · 上下排列，节省宽度"
+        case .standard: return L10n.text("标准 · 5h 80% | week 60%", "Standard · 5h 80% | week 60%")
+        case .compact: return L10n.text("紧凑 · 5h:80% w:60%", "Compact · 5h:80% w:60%")
+        case .chinese: return L10n.text("中文 · 5小时 80% · 本周 60%", "Chinese · 5小时 80% · 本周 60%")
+        case .stacked: return L10n.text("双排 · 上下排列，节省宽度", "Two lines · saves menu bar space")
         }
     }
     func lines(quota: QuotaResponse?, hideMissing: Bool = false,
                selection: WindowSelection = .both, numbersOnly: Bool = false) -> [String] {
         let windows: [(String, QuotaWindow?)] = [(self == .chinese ? "5小时" : "5h", quota?.fiveHour),
-            (self == .chinese ? "本周" : (self == .compact || self == .stacked ? "w" : "week"), quota?.week)]
+            (self == .chinese ? "本周" : (self == .compact || self == .stacked ? "w" : L10n.text("本周", "week")), quota?.week)]
         return windows.enumerated().compactMap { index, item in
             if !selection.includes(index: index) { return nil }
             let (label, window) = item
@@ -107,9 +107,9 @@ enum WindowSelection: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .both: return "5h 和周额度"
-        case .fiveHour: return "仅 5h"
-        case .week: return "仅周额度"
+        case .both: return L10n.text("5h 和周额度", "5h and weekly")
+        case .fiveHour: return L10n.text("仅 5h", "5h only")
+        case .week: return L10n.text("仅周额度", "Weekly only")
         }
     }
     func includes(index: Int) -> Bool {

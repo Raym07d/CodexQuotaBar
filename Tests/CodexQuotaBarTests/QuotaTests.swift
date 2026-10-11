@@ -9,8 +9,8 @@ final class QuotaTests: XCTestCase {
         let quota = try decode(#"{"rateLimits":{"primary":{"usedPercent":99}},"rateLimitsByLimitId":{"special":{"primary":{"usedPercent":100}},"codex":{"primary":{"usedPercent":20,"windowDurationMins":300},"secondary":{"usedPercent":41,"windowDurationMins":10080}}}}"#)
         XCTAssertEqual(quota.buckets.map(\.id), ["codex", "special"])
         XCTAssertEqual(quota.menuRemaining, 59)
-        XCTAssertEqual(quota.buckets[0].value.primary?.duration, "5 小时")
-        XCTAssertEqual(quota.buckets[0].value.secondary?.duration, "7 天")
+        XCTAssertEqual(quota.buckets[0].value.primary?.duration, L10n.text("5 小时", "5 hours"))
+        XCTAssertEqual(quota.buckets[0].value.secondary?.duration, L10n.text("7 天", "7 days"))
     }
     func testLegacyAndNullValues() throws {
         let quota = try decode(#"{"rateLimits":{"primary":{"usedPercent":null,"resetsAt":null},"secondary":null},"rateLimitsByLimitId":null}"#)
@@ -31,20 +31,20 @@ final class QuotaTests: XCTestCase {
 
     func testWindowLabelsUseDurationNotPosition() throws {
         let quota = try decode(#"{"rateLimits":{"primary":{"usedPercent":5,"windowDurationMins":10080},"secondary":{"usedPercent":23,"windowDurationMins":300}}}"#)
-        XCTAssertEqual(MenuStyle.standard.text(quota: quota), "5h 77% | week 95%")
+        XCTAssertEqual(MenuStyle.standard.text(quota: quota), L10n.text("5h 77% | 本周 95%", "5h 77% | week 95%"))
         XCTAssertEqual(MenuStyle.compact.text(quota: quota), "5h:77% w:95%")
     }
     func testMissingFiveHourWindowStaysUnknown() throws {
         let quota = try decode(#"{"rateLimits":{"primary":{"usedPercent":5,"windowDurationMins":10080}}}"#)
         XCTAssertNil(quota.fiveHour)
-        XCTAssertEqual(MenuStyle.standard.text(quota: quota), "5h — | week 95%")
-        XCTAssertEqual(MenuStyle.standard.text(quota: nil), "5h — | week —")
+        XCTAssertEqual(MenuStyle.standard.text(quota: quota), L10n.text("5h — | 本周 95%", "5h — | week 95%"))
+        XCTAssertEqual(MenuStyle.standard.text(quota: nil), L10n.text("5h — | 本周 —", "5h — | week —"))
     }
 
     func testCompactHiddenAndStackedWindows() throws {
         let one = try decode(#"{"rateLimits":{"primary":{"usedPercent":5,"windowDurationMins":10080}}}"#)
         XCTAssertEqual(MenuStyle.stacked.text(quota: one, hideMissing: true), "w 95%")
-        XCTAssertEqual(MenuStyle.standard.text(quota: one, hideMissing: true), "week 95%")
+        XCTAssertEqual(MenuStyle.standard.text(quota: one, hideMissing: true), L10n.text("本周 95%", "week 95%"))
         XCTAssertEqual(MenuStyle.stacked.text(quota: nil, hideMissing: true), "—")
         let both = try decode(#"{"rateLimits":{"primary":{"usedPercent":20,"windowDurationMins":300},"secondary":{"usedPercent":5,"windowDurationMins":10080}}}"#)
         XCTAssertEqual(MenuStyle.stacked.text(quota: both, hideMissing: true), "5h 80%\nw 95%")
@@ -118,14 +118,24 @@ final class QuotaTests: XCTestCase {
         try withServer("while read -r line; do :; done\n") { path in
             let start = Date()
             XCTAssertThrowsError(try AppServer(timeout: 0.15).fetch(customPath: path)) {
-                XCTAssertTrue($0.localizedDescription.contains("超时"))
+                XCTAssertTrue($0.localizedDescription.contains(L10n.text("超时", "Timed out")))
             }
             XCTAssertLessThan(Date().timeIntervalSince(start), 3)
         }
         try withServer("read -r line\nexit 0\n") { path in
             XCTAssertThrowsError(try AppServer(timeout: 5).fetch(customPath: path)) {
-                XCTAssertTrue($0.localizedDescription.contains("已退出"))
+                XCTAssertTrue($0.localizedDescription.contains(L10n.text("已退出", "exited")))
             }
         }
+    }
+
+    func testLanguageFollowsFirstMacOSPreference() {
+        XCTAssertEqual(AppLanguage.preferred(["zh-Hans-CN", "en-US"]), .chinese)
+        XCTAssertEqual(AppLanguage.preferred(["zh-Hant-TW"]), .chinese)
+        XCTAssertEqual(AppLanguage.preferred(["en-US", "zh-Hans-CN"]), .english)
+        XCTAssertEqual(AppLanguage.preferred(["fr-FR"]), .english)
+        XCTAssertEqual(AppLanguage.preferred([]), .english)
+        XCTAssertEqual(L10n.text("中文", "English", language: .chinese), "中文")
+        XCTAssertEqual(L10n.text("中文", "English", language: .english), "English")
     }
 }

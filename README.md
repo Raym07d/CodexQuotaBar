@@ -26,6 +26,7 @@ The script creates a locally signed **Debug** app at `build/Debug/CodexQuotaBar.
 - Supports automatic refresh, a custom interval in seconds, and manual refresh. A failed refresh is marked as stale rather than presented as current data.
 - Offers standard, compact, Chinese, and two-line menu bar layouts. Show both windows, only 5-hour, or only weekly quota; optionally hide missing windows and display percentages without labels.
 - Includes an optional movable desktop panel. This is an in-app panel, not a macOS WidgetKit extension, and it closes when the app exits.
+- Automatically displays Chinese or English based on the first preferred macOS language; other languages use English. Restart the app after changing its language preference.
 
 The service may omit a window. In that case the app shows `—` where needed; it never infers an unavailable quota or assumes a reset has occurred.
 

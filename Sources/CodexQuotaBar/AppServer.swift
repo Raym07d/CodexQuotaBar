@@ -25,14 +25,14 @@ final class AppServer {
         let search = (ProcessInfo.processInfo.environment["PATH"] ?? "").split(separator: ":").map { "\($0)/codex" }
         let candidates = custom.isEmpty ? paths + search : [(custom as NSString).expandingTildeInPath]
         guard let path = candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else {
-            throw QuotaError(message: "找不到 Codex。请安装 Codex CLI，或在设置中选择 codex 可执行文件。")
+            throw QuotaError(message: L10n.text("找不到 Codex。请安装 Codex CLI，或在设置中选择 codex 可执行文件。", "Codex was not found. Install Codex CLI or select its executable in Settings."))
         }
         return URL(fileURLWithPath: path)
     }
 
     func fetch(customPath: String = "", progress: (String) -> Void = { _ in }) throws -> QuotaSnapshot {
         fetchDeadline = ProcessInfo.processInfo.systemUptime + timeout
-        progress("正在启动 Codex…")
+        progress(L10n.text("正在启动 Codex…", "Starting Codex…"))
         process.executableURL = try Self.executable(custom: customPath)
         process.arguments = ["app-server", "--listen", "stdio://"]
         process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
@@ -46,18 +46,18 @@ final class AppServer {
         process.standardError = FileHandle.nullDevice
         try process.run()
         defer { stop() }
-        progress("正在连接 Codex…")
+        progress(L10n.text("正在连接 Codex…", "Connecting to Codex…"))
         _ = try request("initialize", params: ["clientInfo": ["name": "codex_quota_bar", "title": "Codex Quota Bar", "version": "1.0.0"]])
         try send(["method": "initialized"])
-        progress("正在读取账户…")
+        progress(L10n.text("正在读取账户…", "Reading account…"))
         let account: AccountResponse = try decode(try request("account/read", params: ["refreshToken": false]))
         guard let identity = account.account else {
-            throw QuotaError(message: "尚未登录。请在终端运行 codex login，以 ChatGPT 账户登录后刷新。")
+            throw QuotaError(message: L10n.text("尚未登录。请在终端运行 codex login，以 ChatGPT 账户登录后刷新。", "You are not signed in. Run codex login in Terminal with your ChatGPT account, then refresh."))
         }
         guard identity.type == "chatgpt" else {
-            throw QuotaError(message: "当前登录方式为 \(identity.type)。请用 codex login 登录 ChatGPT 账户以读取订阅额度。")
+            throw QuotaError(message: L10n.text("当前登录方式为 \(identity.type)。请用 codex login 登录 ChatGPT 账户以读取订阅额度。", "Current sign-in method: \(identity.type). Sign in with a ChatGPT account using codex login to read subscription limits."))
         }
-        progress("正在请求服务端额度…")
+        progress(L10n.text("正在请求服务端额度…", "Requesting server quota…"))
         let quota: QuotaResponse = try decode(try request("account/rateLimits/read"))
         return QuotaSnapshot(quota: quota, account: identity, fetchedAt: Date())
     }
@@ -89,13 +89,13 @@ final class AppServer {
             }
             guard (object["id"] as? Int) == id else { continue }
             if let error = object["error"] as? [String: Any] {
-                let detail = error["message"] as? String ?? "未知服务端错误"
+                let detail = error["message"] as? String ?? L10n.text("未知服务端错误", "Unknown server error")
                 throw QuotaError(message: "\(method)：\(detail)")
             }
             if let result = object["result"] { return result }
-            throw QuotaError(message: "服务端返回了无效响应。")
+            throw QuotaError(message: L10n.text("服务端返回了无效响应。", "The server returned an invalid response."))
         }
-        throw QuotaError(message: "读取服务端额度超时，请检查网络后重试。")
+        throw QuotaError(message: L10n.text("读取服务端额度超时，请检查网络后重试。", "Timed out reading server quota. Check your connection and try again."))
     }
 
     private func readLine(deadline: TimeInterval) throws -> Data {
@@ -107,19 +107,19 @@ final class AppServer {
                 continue
             }
             let remaining = deadline - ProcessInfo.processInfo.systemUptime
-            guard remaining > 0 else { throw QuotaError(message: "读取服务端额度超时，请检查网络后重试。") }
+            guard remaining > 0 else { throw QuotaError(message: L10n.text("读取服务端额度超时，请检查网络后重试。", "Timed out reading server quota. Check your connection and try again.")) }
             var descriptor = pollfd(fd: output.fileHandleForReading.fileDescriptor, events: Int16(POLLIN), revents: 0)
             let ready = Darwin.poll(&descriptor, 1, Int32(min(remaining * 1000, 500)))
             if ready < 0 {
                 if errno == EINTR { continue }
-                throw QuotaError(message: "无法读取 Codex 进程输出。")
+                throw QuotaError(message: L10n.text("无法读取 Codex 进程输出。", "Could not read output from Codex."))
             }
             if ready == 0 { continue }
             var bytes = [UInt8](repeating: 0, count: 8192)
             let count = Darwin.read(descriptor.fd, &bytes, bytes.count)
-            guard count > 0 else { throw QuotaError(message: "Codex app-server 已退出。请检查 Codex 安装和配置。") }
+            guard count > 0 else { throw QuotaError(message: L10n.text("Codex app-server 已退出。请检查 Codex 安装和配置。", "Codex app-server exited. Check your Codex installation and configuration.")) }
             buffer.append(contentsOf: bytes.prefix(count))
-            if buffer.count > 8 * 1024 * 1024 { throw QuotaError(message: "服务端响应过大。") }
+            if buffer.count > 8 * 1024 * 1024 { throw QuotaError(message: L10n.text("服务端响应过大。", "The server response is too large.")) }
         }
     }
 
